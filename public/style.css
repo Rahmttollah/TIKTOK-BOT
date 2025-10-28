@@ -1,2 +1,238 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-* {       margin: 0;       padding: 0;       box-sizing: border-box;   }      body {       font-family: 'Arial', sans-serif;       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);       min-height: 100vh;       padding: 20px;   }      .container {       max-width: 500px;       margin: 0 auto;   }      .login-box, .dashboard {       background: white;       padding: 40px;       border-radius: 15px;       box-shadow: 0 15px 35px rgba(0,0,0,0.1);   }      .header {       text-align: center;       margin-bottom: 30px;   }      .header h1 {       color: #333;       font-size: 28px;       margin-bottom: 5px;   }      .header p {       color: #666;       font-size: 14px;   }      h2 {       text-align: center;       margin-bottom: 30px;       color: #333;       font-size: 24px;   }      .input-group {       position: relative;       margin-bottom: 20px;   }      input[type="email"],   input[type="password"],   input[type="text"],   input[type="number"] {       width: 100%;       padding: 15px;       border: 2px solid #ddd;       border-radius: 10px;       font-size: 16px;       transition: border-color 0.3s;   }      input:focus {       border-color: #667eea;       outline: none;   }      .toggle-password {       position: absolute;       right: 15px;       top: 50%;       transform: translateY(-50%);       cursor: pointer;       user-select: none;       background: none;       border: none;       font-size: 16px;   }      .remember-group {       display: flex;       align-items: center;       margin-bottom: 20px;   }      .remember-group input {       margin-right: 10px;   }      .btn {       width: 100%;       padding: 15px;       background: linear-gradient(135deg, #667eea, #764ba2);       color: white;       border: none;       border-radius: 10px;       font-size: 16px;       cursor: pointer;       transition: transform 0.2s;       margin-bottom: 15px;   }      .btn:hover {       transform: translateY(-2px);   }      .btn:disabled {       opacity: 0.6;       cursor: not-allowed;       transform: none;   }      .start-btn {       background: linear-gradient(135deg, #00b09b, #96c93d);   }      .stop-btn {       background: linear-gradient(135deg, #ff416c, #ff4b2b);   }      .logout {       background: linear-gradient(135deg, #ff416c, #ff4b2b);       width: auto;       padding: 8px 15px;       font-size: 14px;   }      .switch-form {       text-align: center;       margin-top: 20px;   }      .switch-form a {       color: #667eea;       text-decoration: none;       cursor: pointer;   }      .user-info {       display: flex;       justify-content: space-between;       align-items: center;       margin-bottom: 30px;       padding: 15px;       background: #f8f9fa;       border-radius: 10px;   }      .stats-card {       background: #f8f9fa;       padding: 20px;       border-radius: 10px;       margin: 20px 0;   }      .stats-grid {       display: grid;       grid-template-columns: 1fr 1fr;       gap: 15px;       margin-top: 15px;   }      .stat-item {       display: flex;       justify-content: space-between;       padding: 10px;       background: white;       border-radius: 8px;   }      .status {       padding: 4px 8px;       border-radius: 4px;       font-weight: bold;   }      .status.running {       background: #d4edda;       color: #155724;   }      .status.stopped {       background: #f8d7da;       color: #721c24;   }      .success {       color: #155724;       font-weight: bold;   }      .failed {       color: #721c24;       font-weight: bold;   }      #message {       margin-top: 15px;       padding: 10px;       border-radius: 5px;       text-align: center;       display: none;   }      .success-message {       background: #d4edda;       color: #155724;       border: 1px solid #c3e6cb;   }      .error-message {       background: #f8d7da;       color: #721c24;       border: 1px solid #f5c6cb;   }      @media (max-width: 600px) {       .container {           padding: 10px;       }              .login-box, .dashboard {           padding: 20px;       }              .stats-grid {           grid-template-columns: 1fr;       }              .user-info {           flex-direction: column;           gap: 10px;           text-align: center;       }   }
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.login-box, .dashboard {
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    color: #333;
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.header p {
+    color: #666;
+    font-size: 14px;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+    font-size: 24px;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"],
+input[type="number"] {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+input:focus {
+    border-color: #667eea;
+    outline: none;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    user-select: none;
+    background: none;
+    border: none;
+    font-size: 16px;
+}
+
+.remember-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.remember-group input {
+    margin-right: 10px;
+}
+
+.btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    margin-bottom: 15px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.start-btn {
+    background: linear-gradient(135deg, #00b09b, #96c93d);
+}
+
+.stop-btn {
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+}
+
+.logout {
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    width: auto;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.switch-form {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.switch-form a {
+    color: #667eea;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.user-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.section {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    border: 2px solid #e9ecef;
+}
+
+.stats-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    border: 2px solid #e9ecef;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.status.running {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status.stopped {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+#message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    display: none;
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .login-box, .dashboard {
+        padding: 20px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .user-info {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+}
