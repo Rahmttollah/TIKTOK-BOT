@@ -1,1 +1,8 @@
-{     "proxy": {       "use_proxy": false,       "proxy-type": "http",       "auth": false,       "credential": "username:password"     }   }
+{
+  "proxy": {
+    "use_proxy": false,
+    "proxy-type": "http",
+    "auth": false,
+    "credential": "username:password"
+  }
+}
