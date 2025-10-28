@@ -5,7 +5,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const https = require('https');
 const crypto = require('crypto');
-const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,8 +24,6 @@ let botRps = 0, botRpm = 0;
 let botTargetViews = 0;
 let botRunning = false;
 let currentVideoId = '';
-let originalViews = 0;
-let videoTitle = '';
 
 // Initialize databases
 function initDB() {
@@ -112,154 +109,50 @@ app.post('/api/login', async (req, res) => {
     });
 });
 
-// ================= TIKTOK VIDEO INFO =================
-async function getTikTokVideoInfo(videoUrl) {
-    try {
-        // Convert short URL to full URL
-        let finalUrl = videoUrl;
-        if (videoUrl.includes('vt.tiktok.com') || videoUrl.includes('vm.tiktok.com')) {
-            const response = await axios.get(videoUrl, {
-                maxRedirects: 0,
-                validateStatus: function (status) {
-                    return status >= 200 && status < 400;
-                }
-            });
-            finalUrl = response.headers.location || videoUrl;
-        }
-
-        // Extract video ID
-        let videoId = '';
-        const idMatch1 = finalUrl.match(/\d{18,19}/g);
-        const idMatch2 = finalUrl.match(/video\/(\d+)/);
-        
-        if (idMatch1) {
-            videoId = idMatch1[0];
-        } else if (idMatch2) {
-            videoId = idMatch2[1];
-        }
-
-        if (!videoId) {
-            throw new Error('Could not extract video ID');
-        }
-
-        // Get video info from TikTok API
-        const apiUrl = `https://www.tiktok.com/node/share/video/${videoId}`;
-        const response = await axios.get(apiUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
-
-        if (response.data && response.data.itemInfo && response.data.itemInfo.itemStruct) {
-            const videoData = response.data.itemInfo.itemStruct;
-            return {
-                success: true,
-                videoId: videoId,
-                title: videoData.desc || 'No Title',
-                views: videoData.stats.playCount || 0,
-                likes: videoData.stats.diggCount || 0,
-                shares: videoData.stats.shareCount || 0,
-                comments: videoData.stats.commentCount || 0,
-                author: videoData.author ? videoData.author.uniqueId : 'Unknown'
-            };
-        } else {
-            // Fallback: Return basic info
-            return {
-                success: true,
-                videoId: videoId,
-                title: 'TikTok Video',
-                views: 0,
-                likes: 0,
-                shares: 0,
-                comments: 0,
-                author: 'Unknown'
-            };
-        }
-    } catch (error) {
-        console.log('Error getting TikTok info:', error.message);
-        // Fallback: Extract video ID and return basic info
-        let videoId = '';
-        const idMatch = videoUrl.match(/\d{18,19}/g);
-        if (idMatch) videoId = idMatch[0];
-        
-        return {
-            success: true,
-            videoId: videoId,
-            title: 'TikTok Video',
-            views: 0,
-            likes: 0,
-            shares: 0,
-            comments: 0,
-            author: 'Unknown'
-        };
-    }
-}
-
 // ================= TIKTOK BOT ROUTES =================
-app.post('/api/tiktok/info', authenticateToken, async (req, res) => {
-    const { video_url } = req.body;
-    
-    try {
-        const videoInfo = await getTikTokVideoInfo(video_url);
-        res.json(videoInfo);
-    } catch (error) {
-        res.json({ 
-            success: false, 
-            message: 'Error fetching video info: ' + error.message 
-        });
-    }
-});
-
-app.post('/api/tiktok/start', authenticateToken, async (req, res) => {
+app.post('/api/tiktok/start', authenticateToken, (req, res) => {
     const { video_url, target_views } = req.body;
-    const user = req.user;
     
     if (botRunning) {
         return res.json({ success: false, message: 'Bot is already running' });
     }
     
-    try {
-        // Get video info and original views
-        const videoInfo = await getTikTokVideoInfo(video_url);
-        if (!videoInfo.success) {
-            return res.json({ success: false, message: 'Invalid TikTok URL' });
-        }
-        
-        const aweme_id = videoInfo.videoId;
-        const targetViews = parseInt(target_views);
-        originalViews = videoInfo.views;
-        videoTitle = videoInfo.title;
-        
-        // Save to history
-        const history = readDB(HISTORY_DB);
-        const historyItem = {
-            id: Date.now().toString(),
-            userId: user.userId,
-            videoUrl: video_url,
-            videoId: aweme_id,
-            videoTitle: videoInfo.title,
-            originalViews: originalViews,
-            targetViews: targetViews,
-            timestamp: new Date().toISOString()
-        };
-        history.push(historyItem);
-        writeDB(HISTORY_DB, history);
-        
-        // Start bot in background
-        startTikTokBot(aweme_id, targetViews, originalViews);
-        
-        res.json({ 
-            success: true, 
-            message: 'TikTok bot started successfully!',
-            video_id: aweme_id,
-            video_title: videoInfo.title,
-            original_views: originalViews,
-            target_views: targetViews,
-            total_target: originalViews + targetViews
-        });
-    } catch (error) {
-        res.json({ success: false, message: 'Error: ' + error.message });
+    // SIMPLE URL EXTRACTION - WORKING METHOD
+    let videoId = '';
+    const idMatch = video_url.match(/\d{18,19}/);
+    if (idMatch) {
+        videoId = idMatch[0];
+    } else {
+        return res.json({ success: false, message: 'Invalid TikTok URL - No video ID found' });
     }
+    
+    console.log(`🎬 New Bot Started:`);
+    console.log(`🔗 URL: ${video_url}`);
+    console.log(`📹 Video ID: ${videoId}`);
+    console.log(`🎯 Target: ${target_views} views`);
+    
+    // Save to history
+    const user = req.user;
+    const history = readDB(HISTORY_DB);
+    const historyItem = {
+        id: Date.now().toString(),
+        userId: user.userId,
+        videoUrl: video_url,
+        videoId: videoId,
+        timestamp: new Date().toISOString()
+    };
+    history.push(historyItem);
+    writeDB(HISTORY_DB, history);
+    
+    // Start bot
+    startTikTokBot(videoId, parseInt(target_views));
+    
+    res.json({ 
+        success: true, 
+        message: 'TikTok bot started successfully!',
+        video_id: videoId,
+        target_views: parseInt(target_views)
+    });
 });
 
 app.post('/api/tiktok/stop', authenticateToken, (req, res) => {
@@ -276,13 +169,9 @@ app.get('/api/tiktok/stats', authenticateToken, (req, res) => {
             fails: botFails,
             reqs: botReqs,
             rps: botRps,
-            rpm: botRpm,
             target_views: botTargetViews,
-            original_views: originalViews,
             progress: botSuccess,
-            total_target: originalViews + botTargetViews,
-            video_id: currentVideoId,
-            video_title: videoTitle
+            video_id: currentVideoId
         }
     });
 });
@@ -293,19 +182,8 @@ app.get('/api/history', authenticateToken, (req, res) => {
     const history = readDB(HISTORY_DB);
     const userHistory = history.filter(item => item.userId === user.userId)
                               .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                              .slice(0, 20); // Last 20 items
+                              .slice(0, 10);
     res.json({ success: true, history: userHistory });
-});
-
-app.delete('/api/history/:id', authenticateToken, (req, res) => {
-    const user = req.user;
-    const historyId = req.params.id;
-    
-    const history = readDB(HISTORY_DB);
-    const updatedHistory = history.filter(item => !(item.id === historyId && item.userId === user.userId));
-    writeDB(HISTORY_DB, updatedHistory);
-    
-    res.json({ success: true, message: 'History item deleted' });
 });
 
 // ================= ADMIN ROUTES =================
@@ -428,7 +306,7 @@ function sendTikTokRequest(did, iid, cdid, openudid, aweme_id) {
                 'content-type': 'application/x-www-form-urlencoded',
                 'content-length': Buffer.byteLength(payload)
             },
-            timeout: 5000
+            timeout: 3000
         };
 
         const req = https.request(options, (res) => {
@@ -442,17 +320,17 @@ function sendTikTokRequest(did, iid, cdid, openudid, aweme_id) {
                     const jsonData = JSON.parse(data);
                     if (jsonData && jsonData.log_pb && jsonData.log_pb.impr_id) {
                         botSuccess++;
-                        console.log(`✅ TikTok Views: ${botSuccess}/${botTargetViews} | Total: ${originalViews + botSuccess}`);
-                        
-                        if (botSuccess >= botTargetViews) {
-                            console.log('🎉 TikTok Target Completed!');
-                            botRunning = false;
-                        }
+                        console.log(`✅ REAL VIEW SENT: ${botSuccess}/${botTargetViews}`);
                     } else {
                         botFails++;
                     }
                 } catch (e) {
                     botFails++;
+                }
+                
+                if (botSuccess >= botTargetViews) {
+                    console.log('🎉 TARGET COMPLETED! Stopping bot...');
+                    botRunning = false;
                 }
                 resolve();
             });
@@ -485,50 +363,63 @@ async function sendTikTokBatch(batchDevices, aweme_id) {
     await Promise.all(promises);
 }
 
-async function startTikTokBot(aweme_id, target_views, original_views) {
-    console.log('🚀 Starting TikTok Bot...');
-    console.log(`🎯 Target: ${target_views} new views`);
-    console.log(`📹 Original Views: ${original_views}`);
-    console.log(`📹 Total Target: ${original_views + target_views}`);
+async function startTikTokBot(aweme_id, target_views) {
+    console.log('🚀 STARTING TIKTOK BOT');
+    console.log(`🎯 Target: ${target_views} views`);
     console.log(`📹 Video ID: ${aweme_id}`);
     
     const devices = fs.existsSync('devices.txt') ? fs.readFileSync('devices.txt', 'utf-8').split('\n').filter(Boolean) : [];
-    const concurrency = 200;
+    
+    if (devices.length === 0) {
+        console.log('❌ ERROR: No devices loaded! Check devices.txt');
+        botRunning = false;
+        return;
+    }
     
     botRunning = true;
-    botTargetViews = target_views;
-    originalViews = original_views;
-    botReqs = 0; botSuccess = 0; botFails = 0;
+    botTargetViews = parseInt(target_views);
+    botReqs = 0; 
+    botSuccess = 0; 
+    botFails = 0;
     currentVideoId = aweme_id;
+    
+    const concurrency = Math.min(200, devices.length);
+    
+    console.log(`⚡ Concurrency: ${concurrency} threads`);
+    console.log(`📱 Devices: ${devices.length}`);
     
     // Stats loop
     let lastReqs = botReqs;
     const statsInterval = setInterval(() => {
-        botRps = ((botReqs - lastReqs) / 1.5).toFixed(1);
+        botRps = ((botReqs - lastReqs) / 2).toFixed(1);
         botRpm = (botRps * 60).toFixed(1);
         lastReqs = botReqs;
         
         if (!botRunning) {
             clearInterval(statsInterval);
+            console.log(`🛑 Bot stopped. Final: ${botSuccess} success, ${botFails} fails`);
         }
-    }, 1500);
+    }, 2000);
     
     // Main bot loop
     while (botRunning && botSuccess < botTargetViews) {
         const batchDevices = [];
         for (let i = 0; i < concurrency && i < devices.length; i++) {
-            batchDevices.push(devices[Math.floor(Math.random() * devices.length)]);
+            const randomDevice = devices[Math.floor(Math.random() * devices.length)];
+            if (randomDevice && randomDevice.includes(':')) {
+                batchDevices.push(randomDevice);
+            }
         }
-        await sendTikTokBatch(batchDevices, aweme_id);
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    if (botSuccess >= botTargetViews) {
-        console.log(`🎉 TikTok Bot Completed! Sent ${botSuccess} new views`);
-        console.log(`📊 Total Views: ${original_views + botSuccess}`);
+        
+        if (batchDevices.length > 0) {
+            await sendTikTokBatch(batchDevices, aweme_id);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 50));
     }
     
     botRunning = false;
+    console.log(`🎉 BOT FINISHED: ${botSuccess} views sent!`);
 }
 
 // ================= MIDDLEWARE =================
@@ -552,10 +443,10 @@ function authenticateToken(req, res, next) {
 // ================= SERVER START =================
 app.listen(PORT, () => {
     initDB();
-    console.log(`🚀 Enhanced TikTok Bot Website Running!`);
+    console.log(`🚀 TikTok Bot Website Running!`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`🌐 Login: http://localhost:${PORT}/`);
     console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
-    console.log(`🤖 TikTok Bot: Ready with Real View Counting`);
+    console.log(`🤖 TikTok Bot: READY`);
     console.log(`🔐 Admin Key: YOUR_ADMIN_SECRET_123`);
 });
