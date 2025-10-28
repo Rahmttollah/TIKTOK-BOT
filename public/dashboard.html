@@ -20,47 +20,60 @@
             <!-- TikTok Bot Section -->
             <div class="section">
                 <h2>🎬 TikTok View Bot</h2>
-                <form id="tiktokForm">
-                    <div class="input-group">
-                        <input type="number" id="tiktokTarget" placeholder="Target views (e.g., 1000)" min="1" required>
+                
+                <div class="input-group">
+                    <label>Target Views:</label>
+                    <input type="number" id="tiktokTarget" placeholder="e.g., 100" min="1" value="50" required>
+                </div>
+                
+                <div class="input-group">
+                    <label>TikTok URL:</label>
+                    <input type="text" id="tiktokUrl" placeholder="Paste any TikTok URL" 
+                           value="https://www.tiktok.com/@rally.clipping.ea/video/7566306949894016263" required>
+                    <button type="button" class="btn paste-btn" onclick="pasteUrl()">📋 Paste URL</button>
+                </div>
+                
+                <button class="btn start-btn" onclick="startBot()">🚀 Start TikTok Bot</button>
+                
+                <!-- History Section -->
+                <div class="history-section">
+                    <h3>📜 Recent Links</h3>
+                    <div id="historyList" class="history-list">
+                        Loading history...
                     </div>
-                    <div class="input-group">
-                        <input type="text" id="tiktokUrl" placeholder="TikTok Video URL" required>
-                    </div>
-                    <button type="submit" class="btn start-btn">🚀 Start TikTok Bot</button>
-                </form>
+                </div>
                 
                 <div class="stats-card">
-                    <h3>📊 TikTok Bot Live Stats</h3>
+                    <h3>📊 Live Stats</h3>
                     <div class="stats-grid">
                         <div class="stat-item">
                             <label>Status:</label>
-                            <span id="tiktokStatus" class="status stopped">Stopped</span>
+                            <span id="botStatus" class="status stopped">Stopped</span>
                         </div>
                         <div class="stat-item">
                             <label>Progress:</label>
-                            <span id="tiktokProgress">0/0</span>
+                            <span id="progress">0/0</span>
                         </div>
                         <div class="stat-item">
                             <label>Successful:</label>
-                            <span id="tiktokSuccess">0</span>
+                            <span id="success">0</span>
                         </div>
                         <div class="stat-item">
                             <label>Failed:</label>
-                            <span id="tiktokFails">0</span>
+                            <span id="fails">0</span>
                         </div>
                         <div class="stat-item">
                             <label>Requests:</label>
-                            <span id="tiktokReqs">0</span>
+                            <span id="reqs">0</span>
                         </div>
                         <div class="stat-item">
                             <label>RPS:</label>
-                            <span id="tiktokRps">0</span>
+                            <span id="rps">0</span>
                         </div>
                     </div>
                 </div>
                 
-                <button onclick="stopTikTokBot()" class="btn stop-btn" disabled>🛑 Stop TikTok Bot</button>
+                <button class="btn stop-btn" onclick="stopBot()" disabled>🛑 Stop Bot</button>
             </div>
 
             <!-- System Info -->
@@ -69,7 +82,7 @@
                 <div class="stats-grid">
                     <div class="stat-item">
                         <label>Devices Loaded:</label>
-                        <span id="devicesCount">Loading...</span>
+                        <span id="devicesCount">14,000+</span>
                     </div>
                     <div class="stat-item">
                         <label>Concurrency:</label>
@@ -99,14 +112,17 @@
             logout();
         }
         
-        let tiktokStatsInterval;
+        let statsInterval;
         
-        // Start TikTok Bot
-        document.getElementById('tiktokForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // Start Bot
+        async function startBot() {
+            const target = document.getElementById('tiktokTarget').value;
+            const url = document.getElementById('tiktokUrl').value;
             
-            const targetViews = document.getElementById('tiktokTarget').value;
-            const videoUrl = document.getElementById('tiktokUrl').value;
+            if (!target || !url) {
+                alert('Please enter target views and TikTok URL');
+                return;
+            }
             
             try {
                 const response = await fetch('/api/tiktok/start', {
@@ -116,65 +132,27 @@
                         'Authorization': 'Bearer ' + token
                     },
                     body: JSON.stringify({
-                        target_views: targetViews,
-                        video_url: videoUrl
+                        target_views: target,
+                        video_url: url
                     })
                 });
                 
                 const data = await response.json();
-                alert(data.message);
+                alert(data.success ? '✅ Bot started successfully!' : '❌ Error: ' + data.message);
                 
                 if (data.success) {
                     document.querySelector('.start-btn').disabled = true;
                     document.querySelector('.stop-btn').disabled = false;
-                    startTikTokStatsUpdate();
+                    startStatsUpdate();
+                    loadHistory();
                 }
             } catch (error) {
-                alert('Error starting TikTok bot');
-            }
-        });
-        
-        // Update TikTok Bot Stats
-        async function startTikTokStatsUpdate() {
-            if (tiktokStatsInterval) clearInterval(tiktokStatsInterval);
-            
-            tiktokStatsInterval = setInterval(async () => {
-                try {
-                    const response = await fetch('/api/tiktok/stats', {
-                        headers: {
-                            'Authorization': 'Bearer ' + token
-                        }
-                    });
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        updateTikTokStatsDisplay(data);
-                    }
-                } catch (error) {
-                    console.log('Error fetching TikTok stats');
-                }
-            }, 2000);
-        }
-        
-        function updateTikTokStatsDisplay(data) {
-            const statusElem = document.getElementById('tiktokStatus');
-            statusElem.textContent = data.running ? 'Running' : 'Stopped';
-            statusElem.className = `status ${data.running ? 'running' : 'stopped'}`;
-            
-            document.getElementById('tiktokProgress').textContent = `${data.stats.progress}/${data.stats.target_views}`;
-            document.getElementById('tiktokSuccess').textContent = data.stats.success;
-            document.getElementById('tiktokFails').textContent = data.stats.fails;
-            document.getElementById('tiktokReqs').textContent = data.stats.reqs;
-            document.getElementById('tiktokRps').textContent = data.stats.rps;
-            
-            if (!data.running) {
-                document.querySelector('.start-btn').disabled = false;
-                document.querySelector('.stop-btn').disabled = true;
-                clearInterval(tiktokStatsInterval);
+                alert('❌ Network error starting bot');
             }
         }
         
-        function stopTikTokBot() {
+        // Stop Bot
+        function stopBot() {
             fetch('/api/tiktok/stop', {
                 method: 'POST',
                 headers: {
@@ -186,24 +164,94 @@
             });
         }
         
+        // Update Stats
+        async function startStatsUpdate() {
+            if (statsInterval) clearInterval(statsInterval);
+            
+            statsInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/tiktok/stats', {
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        updateStatsDisplay(data);
+                    }
+                } catch (error) {
+                    console.log('Error fetching stats');
+                }
+            }, 1000);
+        }
+        
+        function updateStatsDisplay(data) {
+            const statusElem = document.getElementById('botStatus');
+            statusElem.textContent = data.running ? 'Running' : 'Stopped';
+            statusElem.className = `status ${data.running ? 'running' : 'stopped'}`;
+            
+            document.getElementById('progress').textContent = `${data.stats.progress}/${data.stats.target_views}`;
+            document.getElementById('success').textContent = data.stats.success;
+            document.getElementById('fails').textContent = data.stats.fails;
+            document.getElementById('reqs').textContent = data.stats.reqs;
+            document.getElementById('rps').textContent = data.stats.rps;
+            
+            if (!data.running) {
+                document.querySelector('.start-btn').disabled = false;
+                document.querySelector('.stop-btn').disabled = true;
+            }
+        }
+        
+        // Paste URL
+        function pasteUrl() {
+            navigator.clipboard.readText().then(text => {
+                document.getElementById('tiktokUrl').value = text;
+            }).catch(err => {
+                alert('📋 Paste failed. Please paste manually.');
+            });
+        }
+        
+        // Load History
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success && data.history.length > 0) {
+                    const historyList = document.getElementById('historyList');
+                    historyList.innerHTML = data.history.map(item => `
+                        <div class="history-item" onclick="useHistory('${item.videoUrl}')">
+                            <div class="history-url">${item.videoUrl.substring(0, 50)}...</div>
+                            <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('historyList').innerHTML = 'No history yet';
+                }
+            } catch (error) {
+                document.getElementById('historyList').innerHTML = 'Error loading history';
+            }
+        }
+        
+        // Use History Item
+        function useHistory(url) {
+            document.getElementById('tiktokUrl').value = url;
+        }
+        
+        // Logout
         function logout() {
             localStorage.removeItem('token');
             window.location.href = '/';
         }
         
-        // Load devices count
-        async function loadDevicesCount() {
-            try {
-                // This would need a proper API endpoint
-                document.getElementById('devicesCount').textContent = '14,000+ (from file)';
-            } catch (error) {
-                document.getElementById('devicesCount').textContent = 'Loaded';
-            }
-        }
-        
         // Initial load
-        startTikTokStatsUpdate();
-        loadDevicesCount();
+        startStatsUpdate();
+        loadHistory();
     </script>
 </body>
 </html>
