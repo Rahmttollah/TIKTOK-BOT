@@ -1,7 +1,7 @@
 {
-  "name": "tiktok-bot-complete",
-  "version": "4.0.0",
-  "description": "Complete TikTok View Bot with Login System",
+  "name": "tiktok-bot-enhanced",
+  "version": "5.0.0",
+  "description": "Enhanced TikTok View Bot with Real View Counting",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,7 +9,8 @@
   "dependencies": {
     "express": "^4.18.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.0"
+    "jsonwebtoken": "^9.0.0",
+    "axios": "^1.6.0"
   },
   "author": "NAIMUL HACKER KING",
   "license": "MIT"
