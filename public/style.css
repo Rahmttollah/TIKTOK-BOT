@@ -51,6 +51,13 @@ h2 {
     margin-bottom: 20px;
 }
 
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
 input[type="email"],
 input[type="password"],
 input[type="text"],
@@ -91,16 +98,14 @@ input:focus {
 }
 
 .btn {
-    width: 100%;
-    padding: 15px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+    padding: 15px 25px;
     border: none;
     border-radius: 10px;
     font-size: 16px;
     cursor: pointer;
     transition: transform 0.2s;
     margin-bottom: 15px;
+    width: 100%;
 }
 
 .btn:hover {
@@ -115,10 +120,12 @@ input:focus {
 
 .start-btn {
     background: linear-gradient(135deg, #00b09b, #96c93d);
+    color: white;
 }
 
 .stop-btn {
     background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    color: white;
 }
 
 .logout {
@@ -126,6 +133,13 @@ input:focus {
     width: auto;
     padding: 8px 15px;
     font-size: 14px;
+}
+
+.paste-btn {
+    background: linear-gradient(135deg, #ff9a00, #ff6a00);
+    color: white;
+    width: 100%;
+    margin-top: 10px;
 }
 
 .switch-form {
@@ -195,6 +209,46 @@ input:focus {
 .status.stopped {
     background: #f8d7da;
     color: #721c24;
+}
+
+/* History Styles */
+.history-section {
+    margin: 20px 0;
+}
+
+.history-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.history-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.history-item:hover {
+    background: #f8f9fa;
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.history-url {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.history-time {
+    font-size: 12px;
+    color: #666;
 }
 
 #message {
