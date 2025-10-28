@@ -1,1 +1,16 @@
-{     "name": "tiktok-viewbot-website",     "version": "3.0.0",     "description": "TikTok View Bot with Login System",     "main": "server.js",     "scripts": {       "start": "node server.js"     },     "dependencies": {       "express": "^4.18.0",       "bcryptjs": "^2.4.3",       "jsonwebtoken": "^9.0.0"     },     "author": "NAIMUL HACKER KING",     "license": "MIT"   }
+{
+  "name": "tiktok-bot-complete",
+  "version": "4.0.0",
+  "description": "Complete TikTok View Bot with Login System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "author": "NAIMUL HACKER KING",
+  "license": "MIT"
+}
