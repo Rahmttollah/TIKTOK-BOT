@@ -17,63 +17,95 @@
                 </div>
             </div>
             
+            <!-- Video Info Section -->
+            <div class="section video-info-section" id="videoInfoSection" style="display: none;">
+                <h2>📹 Video Information</h2>
+                <div class="video-details" id="videoDetails">
+                    <!-- Video details will appear here -->
+                </div>
+            </div>
+
             <!-- TikTok Bot Section -->
             <div class="section">
                 <h2>🎬 TikTok View Bot</h2>
                 
                 <div class="input-group">
-                    <label>Target Views:</label>
-                    <input type="number" id="tiktokTarget" placeholder="e.g., 100" min="1" value="50" required>
-                </div>
-                
-                <div class="input-group">
-                    <label>TikTok URL:</label>
-                    <input type="text" id="tiktokUrl" placeholder="Paste any TikTok URL" 
-                           value="https://www.tiktok.com/@rally.clipping.ea/video/7566306949894016263" required>
-                    <button type="button" class="btn paste-btn" onclick="pasteUrl()">📋 Paste URL</button>
-                </div>
-                
-                <button class="btn start-btn" onclick="startBot()">🚀 Start TikTok Bot</button>
-                
-                <!-- History Section -->
-                <div class="history-section">
-                    <h3>📜 Recent Links</h3>
-                    <div id="historyList" class="history-list">
-                        Loading history...
+                    <label for="tiktokUrl">TikTok Video URL:</label>
+                    <div class="url-input-group">
+                        <input type="text" id="tiktokUrl" placeholder="Paste TikTok video URL here..." required>
+                        <button type="button" class="btn btn-info" onclick="getVideoInfo()">Get Video Info</button>
                     </div>
                 </div>
+
+                <div id="videoPreview" class="video-preview" style="display: none;">
+                    <!-- Video preview will appear here -->
+                </div>
+                
+                <form id="tiktokForm">
+                    <div class="input-group">
+                        <label for="tiktokTarget">Target Additional Views:</label>
+                        <input type="number" id="tiktokTarget" placeholder="e.g., 1000" min="1" required>
+                    </div>
+                    
+                    <div class="target-info">
+                        <div class="target-item">
+                            <span class="target-label">Current Views:</span>
+                            <span class="target-value" id="currentViews">0</span>
+                        </div>
+                        <div class="target-item">
+                            <span class="target-label">Target Views:</span>
+                            <span class="target-value" id="targetViews">0</span>
+                        </div>
+                        <div class="target-item">
+                            <span class="target-label">Final Views:</span>
+                            <span class="target-value" id="finalViews">0</span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn start-btn">🚀 Start TikTok Bot</button>
+                </form>
                 
                 <div class="stats-card">
-                    <h3>📊 Live Stats</h3>
+                    <h3>📊 TikTok Bot Live Stats</h3>
                     <div class="stats-grid">
                         <div class="stat-item">
                             <label>Status:</label>
-                            <span id="botStatus" class="status stopped">Stopped</span>
+                            <span id="tiktokStatus" class="status stopped">Stopped</span>
                         </div>
                         <div class="stat-item">
                             <label>Progress:</label>
-                            <span id="progress">0/0</span>
+                            <span id="tiktokProgress">0/0</span>
                         </div>
                         <div class="stat-item">
-                            <label>Successful:</label>
-                            <span id="success">0</span>
+                            <label>Bot Views Sent:</label>
+                            <span id="tiktokSuccess">0</span>
                         </div>
                         <div class="stat-item">
-                            <label>Failed:</label>
-                            <span id="fails">0</span>
+                            <label>Initial Views:</label>
+                            <span id="initialViews">0</span>
                         </div>
                         <div class="stat-item">
-                            <label>Requests:</label>
-                            <span id="reqs">0</span>
+                            <label>Estimated Total:</label>
+                            <span id="estimatedTotal">0</span>
                         </div>
                         <div class="stat-item">
                             <label>RPS:</label>
-                            <span id="rps">0</span>
+                            <span id="tiktokRps">0</span>
                         </div>
                     </div>
                 </div>
                 
-                <button class="btn stop-btn" onclick="stopBot()" disabled>🛑 Stop Bot</button>
+                <button onclick="stopTikTokBot()" class="btn stop-btn" disabled>🛑 Stop TikTok Bot</button>
+            </div>
+
+            <!-- History Section -->
+            <div class="section">
+                <h3>📋 View History</h3>
+                <button class="btn btn-info" onclick="loadHistory()">🔄 Refresh History</button>
+                
+                <div class="history-list" id="historyList">
+                    <div class="empty-state">No history yet. Start your first view campaign!</div>
+                </div>
             </div>
 
             <!-- System Info -->
@@ -89,8 +121,8 @@
                         <span>200 threads</span>
                     </div>
                     <div class="stat-item">
-                        <label>Target Mode:</label>
-                        <span>Auto-stop on completion</span>
+                        <label>Tracking:</label>
+                        <span>Real View Count</span>
                     </div>
                 </div>
             </div>
@@ -112,15 +144,109 @@
             logout();
         }
         
-        let statsInterval;
+        let tiktokStatsInterval;
+        let currentVideoInfo = null;
         
-        // Start Bot
-        async function startBot() {
-            const target = document.getElementById('tiktokTarget').value;
-            const url = document.getElementById('tiktokUrl').value;
+        // Get Video Information
+        async function getVideoInfo() {
+            const videoUrl = document.getElementById('tiktokUrl').value.trim();
+            if (!videoUrl) {
+                alert('Please enter a TikTok URL');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/tiktok/video-info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ video_url: videoUrl })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentVideoInfo = data;
+                    displayVideoInfo(data);
+                    updateTargetCalculations(data.views);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error fetching video information');
+            }
+        }
+        
+        // Display Video Information
+        function displayVideoInfo(videoInfo) {
+            const videoInfoSection = document.getElementById('videoInfoSection');
+            const videoDetails = document.getElementById('videoDetails');
             
-            if (!target || !url) {
-                alert('Please enter target views and TikTok URL');
+            videoDetails.innerHTML = `
+                <div class="video-card">
+                    <div class="video-header">
+                        <h4>${videoInfo.title || 'TikTok Video'}</h4>
+                        <span class="video-id">ID: ${videoInfo.video_id}</span>
+                    </div>
+                    <div class="video-stats">
+                        <div class="stat">
+                            <span class="stat-label">👀 Views:</span>
+                            <span class="stat-value">${videoInfo.views.toLocaleString()}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">❤️ Likes:</span>
+                            <span class="stat-value">${videoInfo.likes.toLocaleString()}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">💬 Comments:</span>
+                            <span class="stat-value">${videoInfo.comments.toLocaleString()}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">🔄 Shares:</span>
+                            <span class="stat-value">${videoInfo.shares.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <div class="video-author">
+                        <strong>Author:</strong> ${videoInfo.author}
+                    </div>
+                </div>
+            `;
+            
+            videoInfoSection.style.display = 'block';
+        }
+        
+        // Update Target Calculations
+        function updateTargetCalculations(currentViews) {
+            const targetInput = document.getElementById('tiktokTarget');
+            const currentViewsElem = document.getElementById('currentViews');
+            const targetViewsElem = document.getElementById('targetViews');
+            const finalViewsElem = document.getElementById('finalViews');
+            
+            currentViewsElem.textContent = currentViews.toLocaleString();
+            
+            targetInput.addEventListener('input', function() {
+                const target = parseInt(this.value) || 0;
+                const final = currentViews + target;
+                
+                targetViewsElem.textContent = target.toLocaleString();
+                finalViewsElem.textContent = final.toLocaleString();
+            });
+            
+            // Trigger initial calculation
+            targetInput.dispatchEvent(new Event('input'));
+        }
+        
+        // Start TikTok Bot
+        document.getElementById('tiktokForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const targetViews = document.getElementById('tiktokTarget').value;
+            const videoUrl = document.getElementById('tiktokUrl').value;
+            
+            if (!currentVideoInfo) {
+                alert('Please get video information first');
                 return;
             }
             
@@ -132,27 +258,67 @@
                         'Authorization': 'Bearer ' + token
                     },
                     body: JSON.stringify({
-                        target_views: target,
-                        video_url: url
+                        target_views: targetViews,
+                        video_url: videoUrl
                     })
                 });
                 
                 const data = await response.json();
-                alert(data.success ? '✅ Bot started successfully!' : '❌ Error: ' + data.message);
+                alert(data.message);
                 
                 if (data.success) {
                     document.querySelector('.start-btn').disabled = true;
                     document.querySelector('.stop-btn').disabled = false;
-                    startStatsUpdate();
-                    loadHistory();
+                    startTikTokStatsUpdate();
+                    loadHistory(); // Refresh history
                 }
             } catch (error) {
-                alert('❌ Network error starting bot');
+                alert('Error starting TikTok bot');
+            }
+        });
+        
+        // Update TikTok Bot Stats
+        async function startTikTokStatsUpdate() {
+            if (tiktokStatsInterval) clearInterval(tiktokStatsInterval);
+            
+            tiktokStatsInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/tiktok/stats', {
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        updateTikTokStatsDisplay(data);
+                    }
+                } catch (error) {
+                    console.log('Error fetching TikTok stats');
+                }
+            }, 2000);
+        }
+        
+        function updateTikTokStatsDisplay(data) {
+            const statusElem = document.getElementById('tiktokStatus');
+            statusElem.textContent = data.running ? 'Running' : 'Stopped';
+            statusElem.className = `status ${data.running ? 'running' : 'stopped'}`;
+            
+            document.getElementById('tiktokProgress').textContent = 
+                `${data.stats.progress}/${data.stats.target_views}`;
+            document.getElementById('tiktokSuccess').textContent = data.stats.success.toLocaleString();
+            document.getElementById('initialViews').textContent = data.stats.initial_views.toLocaleString();
+            document.getElementById('estimatedTotal').textContent = data.stats.estimated_total.toLocaleString();
+            document.getElementById('tiktokRps').textContent = data.stats.rps;
+            
+            if (!data.running) {
+                document.querySelector('.start-btn').disabled = false;
+                document.querySelector('.stop-btn').disabled = true;
+                clearInterval(tiktokStatsInterval);
             }
         }
         
-        // Stop Bot
-        function stopBot() {
+        function stopTikTokBot() {
             fetch('/api/tiktok/stop', {
                 method: 'POST',
                 headers: {
@@ -164,93 +330,75 @@
             });
         }
         
-        // Update Stats
-        async function startStatsUpdate() {
-            if (statsInterval) clearInterval(statsInterval);
-            
-            statsInterval = setInterval(async () => {
-                try {
-                    const response = await fetch('/api/tiktok/stats', {
-                        headers: {
-                            'Authorization': 'Bearer ' + token
-                        }
-                    });
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        updateStatsDisplay(data);
-                    }
-                } catch (error) {
-                    console.log('Error fetching stats');
-                }
-            }, 1000);
-        }
-        
-        function updateStatsDisplay(data) {
-            const statusElem = document.getElementById('botStatus');
-            statusElem.textContent = data.running ? 'Running' : 'Stopped';
-            statusElem.className = `status ${data.running ? 'running' : 'stopped'}`;
-            
-            document.getElementById('progress').textContent = `${data.stats.progress}/${data.stats.target_views}`;
-            document.getElementById('success').textContent = data.stats.success;
-            document.getElementById('fails').textContent = data.stats.fails;
-            document.getElementById('reqs').textContent = data.stats.reqs;
-            document.getElementById('rps').textContent = data.stats.rps;
-            
-            if (!data.running) {
-                document.querySelector('.start-btn').disabled = false;
-                document.querySelector('.stop-btn').disabled = true;
-            }
-        }
-        
-        // Paste URL
-        function pasteUrl() {
-            navigator.clipboard.readText().then(text => {
-                document.getElementById('tiktokUrl').value = text;
-            }).catch(err => {
-                alert('📋 Paste failed. Please paste manually.');
-            });
-        }
-        
         // Load History
         async function loadHistory() {
             try {
-                const response = await fetch('/api/history', {
+                const response = await fetch('/api/tiktok/history', {
                     headers: {
                         'Authorization': 'Bearer ' + token
                     }
                 });
+                
                 const data = await response.json();
                 
-                if (data.success && data.history.length > 0) {
-                    const historyList = document.getElementById('historyList');
-                    historyList.innerHTML = data.history.map(item => `
-                        <div class="history-item" onclick="useHistory('${item.videoUrl}')">
-                            <div class="history-url">${item.videoUrl.substring(0, 50)}...</div>
-                            <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    document.getElementById('historyList').innerHTML = 'No history yet';
+                if (data.success) {
+                    displayHistory(data.history);
                 }
             } catch (error) {
-                document.getElementById('historyList').innerHTML = 'Error loading history';
+                console.log('Error loading history');
             }
         }
         
-        // Use History Item
-        function useHistory(url) {
-            document.getElementById('tiktokUrl').value = url;
+        function displayHistory(history) {
+            const historyList = document.getElementById('historyList');
+            
+            if (!history || history.length === 0) {
+                historyList.innerHTML = '<div class="empty-state">No history yet. Start your first view campaign!</div>';
+                return;
+            }
+            
+            historyList.innerHTML = history.map(item => `
+                <div class="history-item">
+                    <div class="history-header">
+                        <strong>${item.video_info.title || 'TikTok Video'}</strong>
+                        <span class="history-date">${new Date(item.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div class="history-details">
+                        <div class="history-stat">
+                            <span>Initial Views:</span>
+                            <strong>${item.initial_views.toLocaleString()}</strong>
+                        </div>
+                        <div class="history-stat">
+                            <span>Target:</span>
+                            <strong>+${item.target_views.toLocaleString()}</strong>
+                        </div>
+                        <div class="history-stat">
+                            <span>Final Target:</span>
+                            <strong>${(item.initial_views + item.target_views).toLocaleString()}</strong>
+                        </div>
+                    </div>
+                    <div class="history-url">
+                        <small>${item.video_url}</small>
+                    </div>
+                </div>
+            `).join('');
         }
         
-        // Logout
         function logout() {
             localStorage.removeItem('token');
             window.location.href = '/';
         }
         
+        // Enter key support for URL input
+        document.getElementById('tiktokUrl').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                getVideoInfo();
+            }
+        });
+        
         // Initial load
-        startStatsUpdate();
+        startTikTokStatsUpdate();
         loadHistory();
     </script>
 </body>
