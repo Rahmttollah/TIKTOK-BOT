@@ -26,6 +26,7 @@ let currentVideoId = '';
 
 // Initialize databases
 // Initialize databases
+// Initialize databases
 function initDB() {
     if (!fs.existsSync(USERS_DB)) fs.writeFileSync(USERS_DB, '[]');
     
@@ -33,9 +34,16 @@ function initDB() {
     if (!fs.existsSync(ADMINS_DB)) {
         const defaultAdminData = {
             referral_codes: [
-                
-                'NAIMULKING'
-                
+                'WELCOME100',
+                'VIPACCESS', 
+                'FREETRIAL',
+                'NAIMULKING',
+                'TIKTOK2024',
+                'BOTMASTER',
+                'HACKERPRO',
+                'VIEWS5000',
+                'PREMIUM01',
+                'GOLDENKEY'
             ],
             settings: {}
         };
@@ -46,9 +54,11 @@ function initDB() {
         const adminData = readDB(ADMINS_DB);
         if (!adminData.referral_codes || adminData.referral_codes.length === 0) {
             adminData.referral_codes = [
-                
-                'NAIMULKING'
-                
+                'WELCOME100',
+                'VIPACCESS',
+                'FREETRIAL', 
+                'NAIMULKING',
+                'TIKTOK2024'
             ];
             writeDB(ADMINS_DB, adminData);
             console.log('✅ Added default referral codes to existing DB');
