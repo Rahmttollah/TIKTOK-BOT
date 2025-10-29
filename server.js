@@ -25,9 +25,35 @@ let botRunning = false;
 let currentVideoId = '';
 
 // Initialize databases
+// Initialize databases
 function initDB() {
     if (!fs.existsSync(USERS_DB)) fs.writeFileSync(USERS_DB, '[]');
-    if (!fs.existsSync(ADMINS_DB)) fs.writeFileSync(ADMINS_DB, '{"referral_codes": [], "settings": {}}');
+    
+    // Admin DB with default referral codes
+    if (!fs.existsSync(ADMINS_DB)) {
+        const defaultAdminData = {
+            referral_codes: [
+                
+                'NAIMULKING'
+                
+            ],
+            settings: {}
+        };
+        fs.writeFileSync(ADMINS_DB, JSON.stringify(defaultAdminData, null, 2));
+        console.log('✅ Default referral codes created');
+    } else {
+        // Agar already exists toh check karo codes hain ya nahi
+        const adminData = readDB(ADMINS_DB);
+        if (!adminData.referral_codes || adminData.referral_codes.length === 0) {
+            adminData.referral_codes = [
+                
+                'NAIMULKING'
+                
+            ];
+            writeDB(ADMINS_DB, adminData);
+            console.log('✅ Added default referral codes to existing DB');
+        }
+    }
     console.log('✅ Databases initialized');
 }
 
