@@ -1,7 +1,7 @@
 {
-  "name": "tiktok-bot-real",
-  "version": "6.0.0", 
-  "description": "REAL TikTok View Bot with Actual API Calls",
+  "name": "tiktok-bot-complete",
+  "version": "4.0.0",
+  "description": "Complete TikTok View Bot with Login System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
