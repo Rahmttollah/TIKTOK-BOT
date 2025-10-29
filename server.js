@@ -16,7 +16,6 @@ app.use(express.static('public'));
 // Database files
 const USERS_DB = 'database.json';
 const ADMINS_DB = 'admin.json';
-const HISTORY_DB = 'history.json';
 
 // TikTok Bot Variables
 let botReqs = 0, botSuccess = 0, botFails = 0;
@@ -24,14 +23,11 @@ let botRps = 0, botRpm = 0;
 let botTargetViews = 0;
 let botRunning = false;
 let currentVideoId = '';
-let currentVideoData = null;
-let initialViewCount = 0;
 
 // Initialize databases
 function initDB() {
     if (!fs.existsSync(USERS_DB)) fs.writeFileSync(USERS_DB, '[]');
     if (!fs.existsSync(ADMINS_DB)) fs.writeFileSync(ADMINS_DB, '{"referral_codes": [], "settings": {}}');
-    if (!fs.existsSync(HISTORY_DB)) fs.writeFileSync(HISTORY_DB, '[]');
 }
 
 function readDB(file) { 
@@ -111,26 +107,9 @@ app.post('/api/login', async (req, res) => {
     });
 });
 
-// ================= TIKTOK VIDEO INFO ROUTES =================
-app.post('/api/tiktok/video-info', authenticateToken, async (req, res) => {
-    const { video_url } = req.body;
-    
-    try {
-        const videoInfo = await getTikTokVideoInfoWorkaround(video_url);
-        if (videoInfo.success) {
-            res.json(videoInfo);
-        } else {
-            res.json({ success: false, message: videoInfo.message });
-        }
-    } catch (error) {
-        res.json({ success: false, message: 'Error fetching video info' });
-    }
-});
-
 // ================= TIKTOK BOT ROUTES =================
-app.post('/api/tiktok/start', authenticateToken, async (req, res) => {
+app.post('/api/tiktok/start', authenticateToken, (req, res) => {
     const { video_url, target_views } = req.body;
-    const user = req.user;
     
     if (botRunning) {
         return res.json({ success: false, message: 'Bot is already running' });
@@ -144,25 +123,14 @@ app.post('/api/tiktok/start', authenticateToken, async (req, res) => {
     const aweme_id = idMatch[0];
     const targetViews = parseInt(target_views);
     
-    // Get video info using workaround
-    const videoInfo = await getTikTokVideoInfoWorkaround(video_url);
-    if (!videoInfo.success) {
-        return res.json({ success: false, message: videoInfo.message });
-    }
-    
-    // Add to history
-    addToHistory(user.email, video_url, videoInfo, targetViews);
-    
     // Start bot in background
-    startTikTokBot(aweme_id, targetViews, videoInfo.views);
+    startTikTokBot(aweme_id, targetViews);
     
     res.json({ 
         success: true, 
         message: 'TikTok bot started successfully!',
         video_id: aweme_id,
-        target_views: targetViews,
-        video_info: videoInfo,
-        initial_views: videoInfo.views
+        target_views: targetViews
     });
 });
 
@@ -183,20 +151,9 @@ app.get('/api/tiktok/stats', authenticateToken, (req, res) => {
             rpm: botRpm,
             target_views: botTargetViews,
             progress: botSuccess,
-            video_id: currentVideoId,
-            initial_views: initialViewCount,
-            estimated_total: initialViewCount + botSuccess
-        },
-        video_info: currentVideoData
+            video_id: currentVideoId
+        }
     });
-});
-
-// ================= HISTORY ROUTES =================
-app.get('/api/tiktok/history', authenticateToken, (req, res) => {
-    const user = req.user;
-    const history = readDB(HISTORY_DB);
-    const userHistory = history.filter(item => item.user_email === user.email);
-    res.json({ success: true, history: userHistory.reverse() });
 });
 
 // ================= ADMIN ROUTES =================
@@ -215,150 +172,73 @@ app.post('/admin/generate-referral', (req, res) => {
     res.json({ success: true, referral_code: referralCode });
 });
 
-// ================= WORKING TIKTOK VIDEO INFO FUNCTIONS =================
-async function getTikTokVideoInfoWorkaround(video_url) {
-    try {
-        const idMatch = video_url.match(/\d{18,19}/g);
-        if (!idMatch) {
-            return { success: false, message: 'Invalid TikTok URL' };
-        }
-        
-        const aweme_id = idMatch[0];
-        
-        // Method 1: Try TikTok API with proper headers
-        let videoInfo = await fetchTikTokVideoInfo(aweme_id);
-        if (videoInfo.success) {
-            return videoInfo;
-        }
-        
-        // Method 2: If API fails, use web scraping simulation
-        console.log('API failed, using simulation...');
-        videoInfo = await simulateTikTokVideoInfo(aweme_id);
-        return videoInfo;
-        
-    } catch (error) {
-        console.log('Error in video info:', error);
-        return { success: false, message: 'Failed to fetch video information' };
-    }
-}
-
-async function fetchTikTokVideoInfo(aweme_id) {
-    return new Promise((resolve) => {
-        const options = {
-            hostname: 'www.tiktok.com',
-            port: 443,
-            path: `/node/share/video/${aweme_id}`,
-            method: 'GET',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://www.tiktok.com/',
-                'Origin': 'https://www.tiktok.com'
-            },
-            timeout: 10000
-        };
-
-        const req = https.request(options, (res) => {
-            let data = '';
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
-            res.on('end', () => {
-                try {
-                    if (res.statusCode === 200) {
-                        const jsonData = JSON.parse(data);
-                        if (jsonData.itemInfo && jsonData.itemInfo.itemStruct) {
-                            const video = jsonData.itemInfo.itemStruct;
-                            resolve({
-                                success: true,
-                                video_id: aweme_id,
-                                title: video.desc || 'TikTok Video',
-                                views: video.stats.playCount || 0,
-                                likes: video.stats.diggCount || 0,
-                                shares: video.stats.shareCount || 0,
-                                comments: video.stats.commentCount || 0,
-                                author: video.author ? video.author.uniqueId : 'unknown',
-                                duration: video.video ? video.video.duration : 0,
-                                created_time: video.createTime ? new Date(video.createTime * 1000).toISOString() : new Date().toISOString()
-                            });
-                        } else {
-                            resolve({ success: false, message: 'Video data not found in response' });
-                        }
-                    } else {
-                        resolve({ success: false, message: `HTTP ${res.statusCode}` });
-                    }
-                } catch (e) {
-                    // If JSON parse fails, try to extract from HTML
-                    resolve(extractFromHTML(data, aweme_id));
-                }
-            });
-        });
-
-        req.on('error', (e) => {
-            resolve({ success: false, message: 'Network error' });
-        });
-
-        req.on('timeout', () => {
-            req.destroy();
-            resolve({ success: false, message: 'Request timeout' });
-        });
-
-        req.end();
-    });
-}
-
-function extractFromHTML(html, aweme_id) {
-    try {
-        // Try to extract from JSON-LD or window data
-        const jsonLdMatch = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/);
-        if (jsonLdMatch) {
-            const jsonData = JSON.parse(jsonLdMatch[1]);
-            if (jsonData.interactionStatistic) {
-                const views = jsonData.interactionStatistic.find(stat => stat.type === 'http://schema.org/WatchAction');
-                return {
-                    success: true,
-                    video_id: aweme_id,
-                    title: jsonData.name || 'TikTok Video',
-                    views: views ? parseInt(views.userInteractionCount) || 0 : 0,
-                    likes: 0,
-                    shares: 0,
-                    comments: 0,
-                    author: jsonData.author || 'unknown',
-                    duration: 0,
-                    created_time: new Date().toISOString()
-                };
-            }
-        }
-        
-        // If extraction fails, return simulation
-        return simulateTikTokVideoInfo(aweme_id);
-    } catch (e) {
-        return simulateTikTokVideoInfo(aweme_id);
-    }
-}
-
-async function simulateTikTokVideoInfo(aweme_id) {
-    // Realistic simulation based on video ID
-    const baseViews = parseInt(aweme_id.substr(-6)) % 10000 + 100; // 100-10,100 views
-    const baseLikes = Math.floor(baseViews * 0.1); // ~10% like ratio
-    const baseComments = Math.floor(baseViews * 0.02); // ~2% comment ratio
-    const baseShares = Math.floor(baseViews * 0.01); // ~1% share ratio
+app.post('/admin/get-codes', (req, res) => {
+    const { admin_key } = req.body;
     
-    return {
-        success: true,
-        video_id: aweme_id,
-        title: `TikTok Video #${aweme_id.substr(-8)}`,
-        views: baseViews,
-        likes: baseLikes,
-        shares: baseShares,
-        comments: baseComments,
-        author: `user_${aweme_id.substr(0, 8)}`,
-        duration: 15 + (parseInt(aweme_id.substr(-2)) % 45), // 15-60 seconds
-        created_time: new Date(Date.now() - (parseInt(aweme_id.substr(-8)) % 2592000000)).toISOString(), // Random time in last 30 days
-        note: "Simulated data - TikTok API restricted"
-    };
-}
+    if (admin_key !== 'YOUR_ADMIN_SECRET_123') {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    const adminData = readDB(ADMINS_DB);
+    res.json({ success: true, codes: adminData.referral_codes || [] });
+});
+
+app.post('/admin/generate-custom-referral', (req, res) => {
+    const { admin_key, custom_code } = req.body;
+    
+    if (admin_key !== 'YOUR_ADMIN_SECRET_123') {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    if (!custom_code || custom_code.length < 3) {
+        return res.json({ success: false, message: 'Custom code must be at least 3 characters' });
+    }
+    
+    const adminData = readDB(ADMINS_DB);
+    
+    if (!adminData.referral_codes) {
+        adminData.referral_codes = [];
+    }
+    
+    if (adminData.referral_codes.includes(custom_code)) {
+        return res.json({ success: false, message: 'Custom code already exists' });
+    }
+    
+    adminData.referral_codes.push(custom_code);
+    writeDB(ADMINS_DB, adminData);
+    
+    res.json({ success: true, referral_code: custom_code });
+});
+
+app.post('/admin/delete-referral', (req, res) => {
+    const { admin_key, referral_code } = req.body;
+    
+    if (admin_key !== 'YOUR_ADMIN_SECRET_123') {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    const adminData = readDB(ADMINS_DB);
+    
+    if (!adminData.referral_codes) {
+        adminData.referral_codes = [];
+    }
+    
+    adminData.referral_codes = adminData.referral_codes.filter(code => code !== referral_code);
+    writeDB(ADMINS_DB, adminData);
+    
+    res.json({ success: true, message: 'Referral code deleted' });
+});
+
+app.get('/admin/users', (req, res) => {
+    const adminKey = req.headers['authorization'];
+    
+    if (adminKey !== 'YOUR_ADMIN_SECRET_123') {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    const users = readDB(USERS_DB);
+    res.json(users);
+});
 
 // ================= TIKTOK BOT FUNCTIONS =================
 function gorgon(params, data, cookies, unix) {
@@ -453,11 +333,10 @@ async function sendTikTokBatch(batchDevices, aweme_id) {
     await Promise.all(promises);
 }
 
-async function startTikTokBot(aweme_id, target_views, initial_views) {
+async function startTikTokBot(aweme_id, target_views) {
     console.log('🚀 Starting TikTok Bot...');
     console.log(`🎯 Target: ${target_views} views`);
     console.log(`📹 Video ID: ${aweme_id}`);
-    console.log(`👀 Initial Views: ${initial_views}`);
     
     const devices = fs.existsSync('devices.txt') ? fs.readFileSync('devices.txt', 'utf-8').split('\n').filter(Boolean) : [];
     const concurrency = 200;
@@ -466,13 +345,12 @@ async function startTikTokBot(aweme_id, target_views, initial_views) {
     botTargetViews = target_views;
     botReqs = 0; botSuccess = 0; botFails = 0;
     currentVideoId = aweme_id;
-    initialViewCount = initial_views;
     
     // Stats loop
     let lastReqs = botReqs;
     const statsInterval = setInterval(() => {
         botRps = ((botReqs - lastReqs) / 1.5).toFixed(1);
-        botRpm = (rps * 60).toFixed(1);
+        botRpm = (botRps * 60).toFixed(1);
         lastReqs = botReqs;
         
         if (!botRunning) {
@@ -497,25 +375,6 @@ async function startTikTokBot(aweme_id, target_views, initial_views) {
     botRunning = false;
 }
 
-// ================= HISTORY FUNCTIONS =================
-function addToHistory(user_email, video_url, video_info, target_views) {
-    const history = readDB(HISTORY_DB);
-    
-    const historyItem = {
-        id: Date.now().toString(),
-        user_email,
-        video_url,
-        video_info,
-        target_views,
-        initial_views: video_info.views,
-        created_at: new Date().toISOString(),
-        status: 'completed'
-    };
-    
-    history.push(historyItem);
-    writeDB(HISTORY_DB, history);
-}
-
 // ================= MIDDLEWARE =================
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -537,10 +396,10 @@ function authenticateToken(req, res, next) {
 // ================= SERVER START =================
 app.listen(PORT, () => {
     initDB();
-    console.log(`🚀 TikTok Bot Website Running!`);
+    console.log(`🚀 Complete TikTok Bot Website Running!`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`🌐 Login: http://localhost:${PORT}/`);
     console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
-    console.log(`🤖 TikTok Bot: Ready with Smart Video Info`);
+    console.log(`🤖 TikTok Bot: Ready with 200 threads`);
     console.log(`🔐 Admin Key: YOUR_ADMIN_SECRET_123`);
 });
