@@ -28,16 +28,22 @@ let currentVideoId = '';
 function initDB() {
     if (!fs.existsSync(USERS_DB)) fs.writeFileSync(USERS_DB, '[]');
     if (!fs.existsSync(ADMINS_DB)) fs.writeFileSync(ADMINS_DB, '{"referral_codes": [], "settings": {}}');
+    console.log('✅ Databases initialized');
 }
 
 function readDB(file) { 
     try {
         return JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch (e) {
+        if (file === USERS_DB) return [];
+        if (file === ADMINS_DB) return {referral_codes: [], settings: {}};
         return [];
     }
 }
-function writeDB(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
+
+function writeDB(file, data) { 
+    fs.writeFileSync(file, JSON.stringify(data, null, 2)); 
+}
 
 // ================= WEBSITE ROUTES =================
 app.get('/', (req, res) => {
@@ -50,6 +56,8 @@ app.get('/dashboard', (req, res) => {
 
 // ================= AUTHENTICATION ROUTES =================
 app.post('/api/register', async (req, res) => {
+    console.log('📝 Registration attempt:', req.body.email);
+    
     const { email, password, referral_code } = req.body;
     
     if (!email || !password || !referral_code) {
@@ -79,13 +87,17 @@ app.post('/api/register', async (req, res) => {
     users.push(newUser);
     writeDB(USERS_DB, users);
     
+    // Remove used referral code
     adminData.referral_codes = adminData.referral_codes.filter(code => code !== referral_code);
     writeDB(ADMINS_DB, adminData);
     
+    console.log('✅ User registered:', email);
     res.json({ success: true, message: 'Registration successful' });
 });
 
 app.post('/api/login', async (req, res) => {
+    console.log('🔐 Login attempt:', req.body.email);
+    
     const { email, password, remember } = req.body;
     
     const users = readDB(USERS_DB);
@@ -99,6 +111,7 @@ app.post('/api/login', async (req, res) => {
         expiresIn: remember ? '30d' : '1d'
     });
     
+    console.log('✅ User logged in:', email);
     res.json({ 
         success: true, 
         message: 'Login successful',
@@ -110,6 +123,8 @@ app.post('/api/login', async (req, res) => {
 // ================= TIKTOK BOT ROUTES =================
 app.post('/api/tiktok/start', authenticateToken, (req, res) => {
     const { video_url, target_views } = req.body;
+    
+    console.log('🚀 TikTok bot start request:', { video_url, target_views });
     
     if (botRunning) {
         return res.json({ success: false, message: 'Bot is already running' });
@@ -156,13 +171,14 @@ app.get('/api/tiktok/stats', authenticateToken, (req, res) => {
     });
 });
 
-// ================= ADMIN ROUTES =================// ================= ADMIN ROUTES =================
+// ================= ADMIN ROUTES =================
 app.post('/admin/generate-referral', (req, res) => {
+    console.log('🔑 Admin generate referral request:', req.body);
+    
     const { admin_key } = req.body;
     
-    console.log('🔑 Admin key received:', admin_key); // Debug log
-    
     if (admin_key !== 'YOUR_ADMIN_SECRET_123') {
+        console.log('❌ Invalid admin key:', admin_key);
         return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
     
@@ -176,12 +192,13 @@ app.post('/admin/generate-referral', (req, res) => {
     adminData.referral_codes.push(referralCode);
     writeDB(ADMINS_DB, adminData);
     
-    console.log('✅ Generated referral code:', referralCode); // Debug log
-    
+    console.log('✅ Generated referral code:', referralCode);
     res.json({ success: true, referral_code: referralCode });
 });
 
 app.post('/admin/get-codes', (req, res) => {
+    console.log('📋 Admin get codes request');
+    
     const { admin_key } = req.body;
     
     if (admin_key !== 'YOUR_ADMIN_SECRET_123') {
@@ -196,6 +213,8 @@ app.post('/admin/get-codes', (req, res) => {
 });
 
 app.post('/admin/generate-custom-referral', (req, res) => {
+    console.log('🎯 Admin custom code request:', req.body);
+    
     const { admin_key, custom_code } = req.body;
     
     if (admin_key !== 'YOUR_ADMIN_SECRET_123') {
@@ -219,10 +238,13 @@ app.post('/admin/generate-custom-referral', (req, res) => {
     adminData.referral_codes.push(custom_code);
     writeDB(ADMINS_DB, adminData);
     
+    console.log('✅ Generated custom code:', custom_code);
     res.json({ success: true, referral_code: custom_code });
 });
 
 app.post('/admin/delete-referral', (req, res) => {
+    console.log('🗑️ Admin delete code request:', req.body);
+    
     const { admin_key, referral_code } = req.body;
     
     if (admin_key !== 'YOUR_ADMIN_SECRET_123') {
@@ -238,19 +260,22 @@ app.post('/admin/delete-referral', (req, res) => {
     adminData.referral_codes = adminData.referral_codes.filter(code => code !== referral_code);
     writeDB(ADMINS_DB, adminData);
     
+    console.log('✅ Deleted referral code:', referral_code);
     res.json({ success: true, message: 'Referral code deleted' });
 });
 
 app.get('/admin/users', (req, res) => {
+    console.log('👥 Admin users request');
+    
     const adminKey = req.headers['authorization'];
     
-    console.log('🔑 Admin users auth key:', adminKey); // Debug log
-    
     if (adminKey !== 'YOUR_ADMIN_SECRET_123') {
+        console.log('❌ Invalid admin key for users:', adminKey);
         return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
     
     const users = readDB(USERS_DB);
+    console.log('✅ Sending users:', users.length);
     res.json(users || []);
 });
 
@@ -360,6 +385,8 @@ async function startTikTokBot(aweme_id, target_views) {
     botReqs = 0; botSuccess = 0; botFails = 0;
     currentVideoId = aweme_id;
     
+    console.log(`📱 Devices loaded: ${devices.length}`);
+    
     // Stats loop
     let lastReqs = botReqs;
     const statsInterval = setInterval(() => {
@@ -410,10 +437,11 @@ function authenticateToken(req, res, next) {
 // ================= SERVER START =================
 app.listen(PORT, () => {
     initDB();
-    console.log(`🚀 Complete TikTok Bot Website Running!`);
+    console.log(`🚀 COMPLETE TIKTOK BOT SERVER RUNNING!`);
     console.log(`📍 Port: ${PORT}`);
-    console.log(`🌐 Login: http://localhost:${PORT}/`);
+    console.log(`🌐 Website: http://localhost:${PORT}/`);
     console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
-    console.log(`🤖 TikTok Bot: Ready with 200 threads`);
+    console.log(`🤖 TikTok Bot: READY`);
     console.log(`🔐 Admin Key: YOUR_ADMIN_SECRET_123`);
+    console.log(`📝 All routes are active with debug logs`);
 });
