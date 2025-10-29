@@ -156,9 +156,11 @@ app.get('/api/tiktok/stats', authenticateToken, (req, res) => {
     });
 });
 
-// ================= ADMIN ROUTES =================
+// ================= ADMIN ROUTES =================// ================= ADMIN ROUTES =================
 app.post('/admin/generate-referral', (req, res) => {
     const { admin_key } = req.body;
+    
+    console.log('🔑 Admin key received:', admin_key); // Debug log
     
     if (admin_key !== 'YOUR_ADMIN_SECRET_123') {
         return res.status(403).json({ success: false, message: 'Unauthorized' });
@@ -166,8 +168,15 @@ app.post('/admin/generate-referral', (req, res) => {
     
     const referralCode = 'REF_' + Math.random().toString(36).substr(2, 8).toUpperCase();
     const adminData = readDB(ADMINS_DB);
+    
+    if (!adminData.referral_codes) {
+        adminData.referral_codes = [];
+    }
+    
     adminData.referral_codes.push(referralCode);
     writeDB(ADMINS_DB, adminData);
+    
+    console.log('✅ Generated referral code:', referralCode); // Debug log
     
     res.json({ success: true, referral_code: referralCode });
 });
@@ -180,7 +189,10 @@ app.post('/admin/get-codes', (req, res) => {
     }
     
     const adminData = readDB(ADMINS_DB);
-    res.json({ success: true, codes: adminData.referral_codes || [] });
+    res.json({ 
+        success: true, 
+        codes: adminData.referral_codes || [] 
+    });
 });
 
 app.post('/admin/generate-custom-referral', (req, res) => {
@@ -232,12 +244,14 @@ app.post('/admin/delete-referral', (req, res) => {
 app.get('/admin/users', (req, res) => {
     const adminKey = req.headers['authorization'];
     
+    console.log('🔑 Admin users auth key:', adminKey); // Debug log
+    
     if (adminKey !== 'YOUR_ADMIN_SECRET_123') {
         return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
     
     const users = readDB(USERS_DB);
-    res.json(users);
+    res.json(users || []);
 });
 
 // ================= TIKTOK BOT FUNCTIONS =================
